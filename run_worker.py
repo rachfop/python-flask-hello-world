@@ -6,26 +6,33 @@ from temporalio import activity, workflow
 from temporalio.client import Client
 from temporalio.worker import Worker
 
+from run_flask import Email
+
 
 @dataclass
-class ComposeGreetingInput:
-    greeting: str
-    name: str
+class SubscribeStatus:
+    status: str
 
 
 @activity.defn
-async def compose_greeting(input: ComposeGreetingInput) -> str:
-    await asyncio.sleep(1)
-    return f"{input.greeting}, {input.name}!"
+async def send_monthly_email(status: SubscribeStatus):
+    # loop for a year
+    for i in range(12):
+        if SubscribeStatus.status == "unsubscribed":
+            return
+        Email.send_email()
+
+        # wait for a month
+        await asyncio.sleep(30 * 24 * 60 * 60)
 
 
 @workflow.defn
 class GreetingWorkflow:
     @workflow.run
-    async def run(self, name: str) -> str:
+    async def run(self, status: str) -> str:
         return await workflow.execute_activity(
-            compose_greeting,
-            ComposeGreetingInput("Hello", name),
+            send_monthly_email,
+            SubscribeStatus(status),
             start_to_close_timeout=timedelta(seconds=10),
         )
 
@@ -39,12 +46,12 @@ async def main():
         client,
         task_queue="hello-activity-task-queue",
         workflows=[GreetingWorkflow],
-        activities=[compose_greeting],
+        activities=[send_monthly_email],
     ):
 
         result = await client.execute_workflow(
             GreetingWorkflow.run,
-            "World",
+            SubscribeStatus.status,
             id="hello-activity-workflow-id",
             task_queue="hello-activity-task-queue",
         )
