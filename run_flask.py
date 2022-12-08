@@ -11,30 +11,25 @@ from run_worker import *
 app = Flask(__name__)
 
 
-@app.route("/")
-async def get_data():
-    result = await main()
-    index = render_template("index.html")
-    return result, index
-
-
 @app.route("/", methods=["GET", "POST"])
 def process_email_form():
+    """
+    If the request method is POST and the form has an email field, then get the email and action from
+    the form, and if the action is subscribe, send a welcome email, and if the action is unsubscribe,
+    send a goodbye email
+    :return: The render_template function is being returned.
+    """
     if request.method == "POST" and request.form.get("email"):
         email = request.form.get("email")
         action = request.form.get("action")
 
         if action == "subscribe":
-            # Add the email address to a list of subscribers
 
             Email().send_email(email, "You've subscribed", "Thank you for subscribing")
             print(f"Subscribed: {email}")
             status = "subscribed"
             return render_template("welcome.html"), status
         elif action == "unsubscribe":
-            # Remove the email address from the list of subscribers
-
-            # Send an email to the user confirming their unsubscription
             Email().send_email(
                 email, "You've unsubscribed", "Thank you for unsubscribing"
             )
@@ -45,12 +40,21 @@ def process_email_form():
     return render_template("email.html")
 
 
+# The Email class sends an email
 class Email:
     def __init__(self):
         self.email_address = os.environ.get("EMAIL_ADDRESS")
         self.email_password = os.environ.get("EMAIL_PASSWORD")
 
     def send_email(self, to, subject, message):
+        """
+        It creates an email message, logs into the email server, and sends the email
+
+        :param to: The email address of the recipient
+        :param subject: The subject of the email
+        :param message: The message you want to send
+        :return: True or False
+        """
         try:
             if self.email_address is None or self.email_password is None:
                 # no email address or password

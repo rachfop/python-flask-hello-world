@@ -16,6 +16,15 @@ class SubscribeStatus:
 
 @activity.defn
 async def send_monthly_email(status: SubscribeStatus):
+    """
+    "Send an email every month for a year, unless the user unsubscribes."
+
+    The function is asynchronous, so it can wait for a month without blocking the event loop
+
+    :param status: SubscribeStatus
+    :type status: SubscribeStatus
+    :return: The return value of the function is the return value of the last statement in the function.
+    """
     # loop for a year
     for i in range(12):
         if SubscribeStatus.status == "unsubscribed":
