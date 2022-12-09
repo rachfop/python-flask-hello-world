@@ -5,20 +5,16 @@ import smtplib
 from email.message import EmailMessage
 from dotenv import load_dotenv
 import asyncio
-
-from run_worker import *
+from temporalio.client import Client
+from run_worker import GreetingWorkflow
 
 app = Flask(__name__)
 
 
 @app.route("/", methods=["GET", "POST"])
-def process_email_form():
-    """
-    If the request method is POST and the form has an email field, then get the email and action from
-    the form, and if the action is subscribe, send a welcome email, and if the action is unsubscribe,
-    send a goodbye email
-    :return: The render_template function is being returned.
-    """
+async def process_email_form():
+    client = await Client.connect("127.0.0.1:7233")
+
     if request.method == "POST" and request.form.get("email"):
         email = request.form.get("email")
         action = request.form.get("action")
@@ -26,39 +22,39 @@ def process_email_form():
         if action == "subscribe":
 
             Email().send_email(email, "You've subscribed", "Thank you for subscribing")
-            print(f"Subscribed: {email}")
-            status = "subscribed"
-            return render_template("welcome.html"), status
+            status = "subscribe"
+            results = await client.execute_workflow(
+                GreetingWorkflow.run,
+                status,
+                id="hello-activity-workflow-id",
+                task_queue="hello-activity-task-queue",
+            )
+
+            return render_template("welcome.html"), results, status
         elif action == "unsubscribe":
             Email().send_email(
                 email, "You've unsubscribed", "Thank you for unsubscribing"
             )
-            print(f"Unsubscribed: {email}")
-            status = "unsubscribed"
-            return render_template("goodbye.html"), status
+            status = "unsubscribe"
+            results = await client.execute_workflow(
+                GreetingWorkflow.run,
+                status,
+                id="hello-activity-workflow-id",
+                task_queue="hello-activity-task-queue",
+            )
+            return render_template("goodbye.html"), results, status
 
     return render_template("email.html")
 
 
-# The Email class sends an email
 class Email:
     def __init__(self):
         self.email_address = os.environ.get("EMAIL_ADDRESS")
         self.email_password = os.environ.get("EMAIL_PASSWORD")
 
     def send_email(self, to, subject, message):
-        """
-        It creates an email message, logs into the email server, and sends the email
-
-        :param to: The email address of the recipient
-        :param subject: The subject of the email
-        :param message: The message you want to send
-        :return: True or False
-        """
         try:
             if self.email_address is None or self.email_password is None:
-                # no email address or password
-                # something is not configured properly
                 print("Did you set email address and password correctly?")
                 return False
 
