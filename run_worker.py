@@ -1,52 +1,28 @@
 import asyncio
-from dataclasses import dataclass
-from datetime import timedelta
-
-from temporalio import activity, workflow
+from datetime import datetime, timedelta
+from temporalio import workflow, activity
 from temporalio.client import Client
 from temporalio.worker import Worker
 
-
-
-
-@dataclass
-class SubscribeStatus:
-    status: str
-
-
 @activity.defn
-async def send_monthly_email(status: SubscribeStatus):
-    status = SubscribeStatus.status
-    for i in range(12):
-        if status == "unsubscribe":
-            return
-        elif status == "subscribe":
-            print("Sending email")
-        # wait for a month
-        await asyncio.sleep(30)
-
-
-
+async def say_hello(name: str) -> str:
+    return f"Hello, {name}!"
 
 @workflow.defn
-class GreetingWorkflow:
+class SayHello:
     @workflow.run
-    async def run(self, status: str) -> str:
+    async def run(self, name: str) -> str:
         return await workflow.execute_activity(
-            send_monthly_email,
-            SubscribeStatus(status),
-            start_to_close_timeout=timedelta(seconds=10),
+            say_hello, name, schedule_to_close_timeout=timedelta(seconds=5)
         )
 
-
-async def start_worker():
-    # Start worker
+async def main():
+    # Create client connected to server at the given address
     client = await Client.connect("localhost:7233")
 
-    async with Worker(
-        client,
-        task_queue="hello-activity-task-queue",
-        workflows=[GreetingWorkflow],
-        activities=[send_monthly_email],
-    ) as worker:
-        await worker.run()
+    # Run the worker
+    worker = Worker(client, task_queue="my-task-queue", workflows=[SayHello], activities=[say_hello])
+    await worker.run()
+
+if __name__ == "__main__":
+    asyncio.run(main())
