@@ -3,23 +3,33 @@ import asyncio
 from flask import Flask, render_template, request
 from temporalio.client import Client
 
-from run_worker import SayHello
+from run_worker import SayHello, WorkflowParameters
+
 
 app = Flask(__name__)
 
 
 @app.route("/", methods=["GET", "POST"])
 async def main():
-    # Create client connected to server at the given address
-    client = await Client.connect("localhost:7233")
+    if request.form.get("action") == "subscribe":
+        user = request.form["email"]
+        client = await Client.connect("localhost:7233")
+        param = WorkflowParameters(email=user)
+        # Execute a workflow
+        result = await client.start_workflow(
+            SayHello.run, param, id=user, task_queue="my-task-queue"
+        )
+        return render_template("welcome.html", result=result, user=user)
 
-    # Execute a workflow
-    result = await client.execute_workflow(
-        SayHello.run, "my name", id="my-workflow-id", task_queue="my-task-queue"
-    )
+    return render_template("email.html")
 
-    print(f"Result: {result}")
-    return render_template("index.html", result=result)
+
+# query the workflow
+@app.route("/query", methods=["GET", "POST"])
+async def query():
+
+    result = await query(SayHello.query_email)
+    return render_template("welcome.html", result=result)
 
 
 if __name__ == "__main__":

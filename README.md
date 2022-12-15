@@ -83,7 +83,7 @@ temporal workflow terminate --workflow-id my-workflow-id
 ## Export environment variables
 
 ```bash
-export FLASK_APP=new_flask.py
+export FLASK_APP=run_flask.py
 export FLASK_DEBUG=true
 ```
 
