@@ -29,7 +29,7 @@ async def main():
 async def query():
 
     result = await query(SayHello.query_email)
-    return render_template("welcome.html", result=result)
+    return render_template("result.html", result=result)
 
 
 if __name__ == "__main__":
